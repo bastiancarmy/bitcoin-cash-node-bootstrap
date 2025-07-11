@@ -1,0 +1,6 @@
+---
+- name: Deploy Bitcoin Cash Node configuration for Chipnet
+  hosts: vps
+  become: yes
+  roles:
+    - role: bchn_config

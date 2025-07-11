@@ -1,0 +1,15 @@
+---
+bchn_data_dir: "/home/{{ lookup('env', 'VAULT_DEPLOY_USER') }}/.bitcoin"
+bchn_config_file: "{{ bchn_data_dir }}/bitcoin.conf"
+bchn_service_name: "bitcoind"
+bchn_user: "{{ lookup('env', 'VAULT_DEPLOY_USER') }}"
+chipnet_config:
+  network: "chipnet"
+  rpcport: 48332
+  p2pport: 48333
+  onionport: 48334
+  rpcuser: "bitcoin"
+  rpcpassword: "{{ lookup('env', 'VAULT_RPC_PASSWORD') }}"
+  server: 1
+  zmqpubrawblock: "tcp://127.0.0.1:28332"
+  zmqpubrawtx: "tcp://127.0.0.1:28333"

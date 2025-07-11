@@ -1,0 +1,70 @@
+---
+- name: Ensure Bitcoin config directory exists
+  ansible.builtin.file:
+    path: "/etc/bitcoin"
+    state: directory
+    owner: "{{ bchn_user }}"
+    group: "{{ bchn_user }}"
+    mode: "0750"
+
+- name: Ensure Bitcoin data directory exists
+  ansible.builtin.file:
+    path: "{{ bchn_data_dir }}"
+    state: directory
+    owner: "{{ bchn_user }}"
+    group: "{{ bchn_user }}"
+    mode: "0700"
+
+- name: Deploy bitcoin.conf for Chipnet
+  ansible.builtin.template:
+    src: bitcoin.conf.j2
+    dest: "{{ bchn_config_file }}"
+    owner: "{{ bchn_user }}"
+    group: "{{ bchn_user }}"
+    mode: "0640"
+    backup: yes
+  notify: Restart bitcoind
+
+- name: Create bitcoind systemd service file
+  ansible.builtin.template:
+    src: bitcoind.service.j2
+    dest: /etc/systemd/system/bitcoind.service
+    owner: "{{ bchn_user }}"
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Validate bitcoind configuration (no daemon)
+  ansible.builtin.command:
+    cmd: "/usr/bin/bitcoind -conf={{ bchn_config_file }} -chipnet -noconnect -printtoconsole -version"
+  register: validate_result
+  failed_when: validate_result.rc != 0
+  changed_when: false
+
+- name: Report validation failure
+  ansible.builtin.debug:
+    msg: "bitcoind configuration validation failed: {{ validate_result.stderr }}"
+  when: validate_result.rc != 0
+  failed_when: validate_result.rc != 0
+
+- name: Ensure bitcoind service is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ bchn_service_name }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  register: service_result
+  ignore_errors: true
+
+- name: Check bitcoind service logs on failure
+  ansible.builtin.command:
+    cmd: "journalctl -u bitcoind -b --no-pager"
+  register: service_logs
+  when: service_result.failed
+  changed_when: false
+
+- name: Report service failure
+  ansible.builtin.debug:
+    msg: "bitcoind service failed to start. Logs:\n{{ service_logs.stdout }}"
+  when: service_result.failed
+  failed_when: service_result.failed

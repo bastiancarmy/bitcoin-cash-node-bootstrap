@@ -1,0 +1,30 @@
+# name: Deploy BCHN Chipnet Configuration
+
+# on:
+#   push:
+#     branches: [main]
+#   workflow_dispatch:
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Set up SSH private key
+#         run: |
+#           mkdir -p ~/.ssh
+#           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+#           chmod 600 ~/.ssh/id_rsa
+#           ssh-keyscan ${{ secrets.VAULT_SERVER_IP }} >> ~/.ssh/known_hosts
+
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Run Ansible Playbook
+#         env:
+#           ANSIBLE_HOST_KEY_CHECKING: False
+#           VAULT_SERVER_IP: ${{ secrets.VAULT_SERVER_IP }}
+#           VAULT_DEPLOY_USER: ${{ secrets.VAULT_DEPLOY_USER }}
+#           VAULT_RPC_PASSWORD: ${{ secrets.VAULT_RPC_PASSWORD }}
+#         run: |
+#           ansible-playbook -i ansible/inventory.yml ansible/deploy.yml
