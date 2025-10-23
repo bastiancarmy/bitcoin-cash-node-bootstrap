@@ -1,0 +1,13 @@
+# bitcoin.conf for Bitcoin Cash Node (Mainnet)
+server={{ mainnet_config.server }}
+rpcuser={{ mainnet_config.rpcuser }}
+rpcpassword={{ mainnet_config.rpcpassword }}
+rpcallowip=127.0.0.1
+prune=10000
+
+[main]
+rpcport={{ mainnet_config.rpcport }}
+port={{ mainnet_config.p2pport }}
+onion={{ mainnet_config.onionport }}
+zmqpubrawblock={{ mainnet_config.zmqpubrawblock }}
+zmqpubrawtx={{ mainnet_config.zmqpubrawtx }}
