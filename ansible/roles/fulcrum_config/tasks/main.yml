@@ -1,0 +1,93 @@
+---
+- name: Ensure Fulcrum user exists
+  ansible.builtin.user:
+    name: "{{ fulcrum_user }}"
+    state: present
+    create_home: yes
+
+- name: Ensure Fulcrum data directory exists for Chipnet
+  ansible.builtin.file:
+    path: "{{ fulcrum_chipnet_data_dir }}"
+    state: directory
+    owner: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_user }}"
+    mode: "0700"
+
+- name: Ensure Fulcrum data directory exists for Tempnet
+  ansible.builtin.file:
+    path: "{{ fulcrum_tempnet_data_dir }}"
+    state: directory
+    owner: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_user }}"
+    mode: "0700"
+
+- name: Generate self-signed SSL certificate if not exists
+  ansible.builtin.command:
+    cmd: "openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -keyout {{ fulcrum_chipnet_key }} -out {{ fulcrum_chipnet_cert }} -subj '/CN=localhost'"
+    creates: "{{ fulcrum_chipnet_cert }}"
+  become_user: "{{ fulcrum_user }}"
+
+- name: Deploy Fulcrum config for Chipnet
+  ansible.builtin.template:
+    src: fulcrum-chipnet.conf.j2
+    dest: "{{ fulcrum_chipnet_config_file }}"
+    owner: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_user }}"
+    mode: "0640"
+    backup: yes
+  notify: Restart fulcrum-chipnet
+
+- name: Deploy Fulcrum config for Tempnet
+  ansible.builtin.template:
+    src: fulcrum-tempnet.conf.j2
+    dest: "{{ fulcrum_tempnet_config_file }}"
+    owner: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_user }}"
+    mode: "0640"
+    backup: yes
+  notify: Restart fulcrum-tempnet
+
+- name: Create fulcrum-chipnet systemd service file
+  ansible.builtin.template:
+    src: fulcrum-chipnet.service.j2
+    dest: /etc/systemd/system/fulcrum-chipnet.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Create fulcrum-tempnet systemd service file
+  ansible.builtin.template:
+    src: fulcrum-tempnet.service.j2
+    dest: /etc/systemd/system/fulcrum-tempnet.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Allow Fulcrum ports in firewall
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "50001"  # Chipnet TCP
+    - "{{ fulcrum_chipnet_wss_port }}"  # Chipnet WSS (50002)
+    - "{{ fulcrum_chipnet_ssl_port }}"  # Chipnet SSL (50000) - New
+    - "50003"  # Tempnet TCP
+    - "{{ fulcrum_tempnet_wss_port }}"  # Tempnet WSS (50004)
+    - "{{ fulcrum_tempnet_ssl_port }}"  # Tempnet SSL (50005) - New
+
+- name: Ensure fulcrum-chipnet service is enabled and running
+  ansible.builtin.systemd:
+    name: "fulcrum-chipnet"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Ensure fulcrum-tempnet service is enabled and running
+  ansible.builtin.systemd:
+    name: "fulcrum-tempnet"
+    state: started
+    enabled: yes
+    daemon_reload: yes

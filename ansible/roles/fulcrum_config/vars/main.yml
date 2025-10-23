@@ -1,0 +1,52 @@
+---
+fulcrum_user: fulcrum
+
+# Chipnet Fulcrum
+fulcrum_chipnet_data_dir: "/home/{{ fulcrum_user }}/fulcrum_db_chipnet"
+fulcrum_chipnet_config_file: "/home/{{ fulcrum_user }}/fulcrum_chipnet.conf"
+fulcrum_chipnet_service_name: "fulcrum-chipnet"
+fulcrum_chipnet_wss_port: 50002  # Changed from ssl_port to wss_port for clarity
+fulcrum_chipnet_ssl_port: 50000  # New: Standard SSL port for Electron Cash compatibility
+fulcrum_chipnet_admin_port: 8000
+fulcrum_chipnet_cert: "/home/{{ fulcrum_user }}/cert.pem"
+fulcrum_chipnet_key: "/home/{{ fulcrum_user }}/key.pem"
+
+chipnet_fulcrum_config:
+  datadir: "{{ fulcrum_chipnet_data_dir }}"
+  bitcoincash: true
+  chipnet: true
+  rpc: "127.0.0.1:{{ chipnet_config.rpcport }}"
+  rpcuser: "{{ chipnet_config.rpcuser }}"
+  rpcpassword: "{{ chipnet_config.rpcpassword }}"
+  zmq: "127.0.0.1:{{ chipnet_config.zmqpubrawblock | regex_replace('tcp://', '') }}"  # Remove tcp://
+  tcp: "0.0.0.0:50001"  # Optional plain TCP for debugging
+  ssl: "0.0.0.0:{{ fulcrum_chipnet_ssl_port }}"  # New: Standard Electrum SSL for Electron Cash
+  wss: "0.0.0.0:{{ fulcrum_chipnet_wss_port }}"  # Changed to wss for WebSocket over TLS compatibility
+  cert: "{{ fulcrum_chipnet_cert }}"
+  key: "{{ fulcrum_chipnet_key }}"
+  adminrpc: "127.0.0.1:{{ fulcrum_chipnet_admin_port }}"
+
+# Tempnet Fulcrum
+fulcrum_tempnet_data_dir: "/home/{{ fulcrum_user }}/fulcrum_db_tempnet"
+fulcrum_tempnet_config_file: "/home/{{ fulcrum_user }}/fulcrum_tempnet.conf"
+fulcrum_tempnet_service_name: "fulcrum-tempnet"
+fulcrum_tempnet_wss_port: 50004  # Changed from ssl_port to wss_port
+fulcrum_tempnet_ssl_port: 50005  # New: Standard SSL port for Electron Cash compatibility
+fulcrum_tempnet_admin_port: 8002
+fulcrum_tempnet_cert: "/home/{{ fulcrum_user }}/cert.pem"  # Shared cert for simplicity
+fulcrum_tempnet_key: "/home/{{ fulcrum_user }}/key.pem"
+
+tempnet_fulcrum_config:
+  datadir: "{{ fulcrum_tempnet_data_dir }}"
+  bitcoincash: true
+  chipnet: true
+  rpc: "127.0.0.1:{{ tempnet_config.rpcport }}"
+  rpcuser: "{{ tempnet_config.rpcuser }}"
+  rpcpassword: "{{ tempnet_config.rpcpassword }}" 
+  zmq: "127.0.0.1:{{ tempnet_config.zmqpubrawblock | regex_replace('tcp://', '') }}"
+  tcp: "0.0.0.0:50003"  # Optional plain TCP for debugging
+  ssl: "0.0.0.0:{{ fulcrum_tempnet_ssl_port }}"  # New: Standard Electrum SSL for Electron Cash
+  wss: "0.0.0.0:{{ fulcrum_tempnet_wss_port }}"  # Changed to wss for WebSocket over TLS compatibility
+  cert: "{{ fulcrum_tempnet_cert }}"
+  key: "{{ fulcrum_tempnet_key }}"
+  adminrpc: "127.0.0.1:{{ fulcrum_tempnet_admin_port }}"

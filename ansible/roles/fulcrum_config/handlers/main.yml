@@ -1,0 +1,14 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Restart fulcrum-chipnet
+  ansible.builtin.systemd:
+    name: "{{ fulcrum_chipnet_service_name }}"
+    state: restarted
+
+- name: Restart fulcrum-tempnet
+  ansible.builtin.systemd:
+    name: "{{ fulcrum_tempnet_service_name }}"
+    state: restarted
