@@ -1,0 +1,21 @@
+[Unit]
+Description=Fulcrum (Chipnet) Electrum Server
+After=bitcoind-chipnet.service
+
+[Service]
+ExecStart=/usr/local/bin/Fulcrum {{ fulcrum_chipnet_config_file }}
+User={{ fulcrum_user }}
+Group={{ fulcrum_user }}
+Type=simple
+Restart=always
+TimeoutSec=300
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target
