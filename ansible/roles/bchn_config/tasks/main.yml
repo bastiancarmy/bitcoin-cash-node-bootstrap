@@ -7,9 +7,17 @@
     group: "{{ bchn_user }}"
     mode: "0750"
 
-- name: Ensure Bitcoin data directory exists
+- name: Ensure Bitcoin data directory exists for Chipnet
   ansible.builtin.file:
-    path: "{{ bchn_data_dir }}"
+    path: "{{ bchn_chipnet_data_dir }}"
+    state: directory
+    owner: "{{ bchn_user }}"
+    group: "{{ bchn_user }}"
+    mode: "0700"
+
+- name: Ensure Bitcoin data directory exists for Mainnet
+  ansible.builtin.file:
+    path: "{{ bchn_mainnet_data_dir }}"
     state: directory
     owner: "{{ bchn_user }}"
     group: "{{ bchn_user }}"
@@ -17,54 +25,104 @@
 
 - name: Deploy bitcoin.conf for Chipnet
   ansible.builtin.template:
-    src: bitcoin.conf.j2
-    dest: "{{ bchn_config_file }}"
+    src: bitcoin-chipnet.conf.j2
+    dest: "{{ bchn_chipnet_config_file }}"
     owner: "{{ bchn_user }}"
     group: "{{ bchn_user }}"
     mode: "0640"
-    backup: yes
-  notify: Restart bitcoind
+    backup: true
+  notify: Restart bitcoind-chipnet
 
-- name: Create bitcoind systemd service file
+- name: Deploy bitcoin.conf for Mainnet
   ansible.builtin.template:
-    src: bitcoind.service.j2
-    dest: /etc/systemd/system/bitcoind.service
+    src: bitcoin-mainnet.conf.j2
+    dest: "{{ bchn_mainnet_config_file }}"
     owner: "{{ bchn_user }}"
+    group: "{{ bchn_user }}"
+    mode: "0640"
+    backup: true
+  notify: Restart bitcoind-mainnet
+
+- name: Create bitcoind-chipnet systemd service file
+  ansible.builtin.template:
+    src: bitcoind-chipnet.service.j2
+    dest: /etc/systemd/system/bitcoind-chipnet.service
+    owner: root
     group: root
     mode: "0644"
   notify: Reload systemd
 
-- name: Validate bitcoind configuration (no daemon)
+- name: Create bitcoind-mainnet systemd service file
+  ansible.builtin.template:
+    src: bitcoind-mainnet.service.j2
+    dest: /etc/systemd/system/bitcoind-mainnet.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Validate bitcoind configuration for Chipnet (no daemon)
   ansible.builtin.command:
-    cmd: "/usr/bin/bitcoind -conf={{ bchn_config_file }} -chipnet -noconnect -printtoconsole -version"
-  register: validate_result
-  failed_when: validate_result.rc != 0
+    cmd:
+      "/usr/local/bin/bitcoind -conf={{ bchn_chipnet_config_file }} -chipnet
+      -noconnect -printtoconsole -version"
+  register: validate_chipnet_result
   changed_when: false
+  failed_when: validate_chipnet_result.rc != 0
 
-- name: Report validation failure
-  ansible.builtin.debug:
-    msg: "bitcoind configuration validation failed: {{ validate_result.stderr }}"
-  when: validate_result.rc != 0
-  failed_when: validate_result.rc != 0
+- name: Validate bitcoind configuration for Mainnet (no daemon)
+  ansible.builtin.command:
+    cmd:
+      "/usr/local/bin/bitcoind -conf={{ bchn_mainnet_config_file }} -noconnect
+      -printtoconsole -version"
+  register: validate_mainnet_result
+  changed_when: false
+  failed_when: validate_mainnet_result.rc != 0
 
-- name: Ensure bitcoind service is enabled and running
+- name: Ensure bitcoind-chipnet service is enabled and running
   ansible.builtin.systemd:
-    name: "{{ bchn_service_name }}"
+    name: "bitcoind-chipnet"
     state: started
-    enabled: yes
-    daemon_reload: yes
-  register: service_result
-  ignore_errors: true
+    enabled: true
+    daemon_reload: true
+  register: service_chipnet_result
+  ignore_errors: true # Remove once stable
 
-- name: Check bitcoind service logs on failure
+- name: Check bitcoind-chipnet service logs on failure
   ansible.builtin.command:
-    cmd: "journalctl -u bitcoind -b --no-pager"
-  register: service_logs
-  when: service_result.failed
+    cmd: "journalctl -u bitcoind-chipnet -b --no-pager"
+  register: service_chipnet_logs
+  when: service_chipnet_result.failed
   changed_when: false
 
-- name: Report service failure
+- name: Report Chipnet service failure
   ansible.builtin.debug:
-    msg: "bitcoind service failed to start. Logs:\n{{ service_logs.stdout }}"
-  when: service_result.failed
-  failed_when: service_result.failed
+    msg:
+      "bitcoind-chipnet service failed to start. Logs:\n{{
+      service_chipnet_logs.stdout }}"
+  when: service_chipnet_result.failed
+  failed_when: service_chipnet_result.failed
+
+- name: Ensure bitcoind-mainnet service is enabled and running
+  ansible.builtin.systemd:
+    name: "bitcoind-mainnet"
+    state: started
+    enabled: true
+    daemon_reload: true
+  register: service_mainnet_result
+  ignore_errors: true # Remove once stable
+
+- name: Check bitcoind-mainnet service logs on failure
+  ansible.builtin.command:
+    cmd: "journalctl -u bitcoind-mainnet -b --no-pager"
+  register: service_mainnet_logs
+  when: service_mainnet_result.failed
+  changed_when: false
+
+- name: Report Mainnet service failure
+  ansible.builtin.debug:
+    msg:
+      "bitcoind-mainnet service failed to start. Logs:\n{{
+      service_mainnet_logs.stdout }}"
+  when: service_mainnet_result.failed
+  failed_when: service_mainnet_result.failed

@@ -1,52 +1,96 @@
 ---
-fulcrum_user: fulcrum
+fulcrum_user: "fulcrum"
+fulcrum_group: "fulcrum"
 
-# Chipnet Fulcrum
-fulcrum_chipnet_data_dir: "/home/{{ fulcrum_user }}/fulcrum_db_chipnet"
-fulcrum_chipnet_config_file: "/home/{{ fulcrum_user }}/fulcrum_chipnet.conf"
+# Service naming
 fulcrum_chipnet_service_name: "fulcrum-chipnet"
-fulcrum_chipnet_wss_port: 50002  # Changed from ssl_port to wss_port for clarity
-fulcrum_chipnet_ssl_port: 50000  # New: Standard SSL port for Electron Cash compatibility
-fulcrum_chipnet_admin_port: 8000
-fulcrum_chipnet_cert: "/home/{{ fulcrum_user }}/cert.pem"
-fulcrum_chipnet_key: "/home/{{ fulcrum_user }}/key.pem"
+fulcrum_mainnet_service_name: "fulcrum-mainnet"
+
+# Data + config paths
+fulcrum_chipnet_data_dir: "/fulcrum/fulcrum-chipnet-data"
+fulcrum_chipnet_config_file: "/etc/fulcrum/fulcrum-chipnet.conf"
+
+fulcrum_mainnet_data_dir: "/fulcrum/fulcrum-mainnet-data"
+fulcrum_mainnet_config_file: "/etc/fulcrum/fulcrum-mainnet.conf"
+
+# Bind addresses
+fulcrum_tcp_host: "0.0.0.0"
+fulcrum_ssl_host: "0.0.0.0"
+fulcrum_ws_host: "0.0.0.0"
+fulcrum_wss_host: "0.0.0.0"
+
+# Ports (Chipnet)
+fulcrum_chipnet_tcp_port: 50001
+fulcrum_chipnet_ssl_port: 50002
+fulcrum_chipnet_ws_port: 50003
+fulcrum_chipnet_wss_port: 50004
+
+# Ports (Mainnet offset to avoid collisions)
+fulcrum_mainnet_tcp_port: 51001
+fulcrum_mainnet_ssl_port: 51002
+fulcrum_mainnet_ws_port: 51003
+fulcrum_mainnet_wss_port: 51004
+
+# TLS paths (managed by Ansible tasks)
+fulcrum_tls_dir: "/etc/fulcrum/tls"
+
+fulcrum_chipnet_ssl_cert_path: "{{ fulcrum_tls_dir }}/chipnet-cert.pem"
+fulcrum_chipnet_ssl_key_path: "{{ fulcrum_tls_dir }}/chipnet-key.pem"
+
+fulcrum_mainnet_ssl_cert_path: "{{ fulcrum_tls_dir }}/mainnet-cert.pem"
+fulcrum_mainnet_ssl_key_path: "{{ fulcrum_tls_dir }}/mainnet-key.pem"
+
+# Use a conservative CN; clients can still connect with self-signed after trust.
+fulcrum_cert_cn: "{{ ansible_facts['fqdn'] | default(inventory_hostname) }}"
+
+# Keep SAN fairly generic; folded scalars preserve commas well enough.
+fulcrum_cert_san: >-
+  subjectAltName=DNS:{{ ansible_facts['fqdn'] | default(inventory_hostname) }},
+  DNS:{{ inventory_hostname }}, DNS:localhost, IP:127.0.0.1
 
 chipnet_fulcrum_config:
   datadir: "{{ fulcrum_chipnet_data_dir }}"
-  bitcoincash: true
-  chipnet: true
-  rpc: "127.0.0.1:{{ chipnet_config.rpcport }}"
+  bitcoind: "127.0.0.1:{{ chipnet_config.rpcport }}"
+
+  # Always use rpcuser/rpcpassword (avoid cookie under /home + ProtectHome)
+  rpccookie: ""
   rpcuser: "{{ chipnet_config.rpcuser }}"
   rpcpassword: "{{ chipnet_config.rpcpassword }}"
-  zmq: "127.0.0.1:{{ chipnet_config.zmqpubrawblock | regex_replace('tcp://', '') }}"  # Remove tcp://
-  tcp: "0.0.0.0:50001"  # Optional plain TCP for debugging
-  ssl: "0.0.0.0:{{ fulcrum_chipnet_ssl_port }}"  # New: Standard Electrum SSL for Electron Cash
-  wss: "0.0.0.0:{{ fulcrum_chipnet_wss_port }}"  # Changed to wss for WebSocket over TLS compatibility
-  cert: "{{ fulcrum_chipnet_cert }}"
-  key: "{{ fulcrum_chipnet_key }}"
-  adminrpc: "127.0.0.1:{{ fulcrum_chipnet_admin_port }}"
 
-# Tempnet Fulcrum
-fulcrum_tempnet_data_dir: "/home/{{ fulcrum_user }}/fulcrum_db_tempnet"
-fulcrum_tempnet_config_file: "/home/{{ fulcrum_user }}/fulcrum_tempnet.conf"
-fulcrum_tempnet_service_name: "fulcrum-tempnet"
-fulcrum_tempnet_wss_port: 50004  # Changed from ssl_port to wss_port
-fulcrum_tempnet_ssl_port: 50005  # New: Standard SSL port for Electron Cash compatibility
-fulcrum_tempnet_admin_port: 8002
-fulcrum_tempnet_cert: "/home/{{ fulcrum_user }}/cert.pem"  # Shared cert for simplicity
-fulcrum_tempnet_key: "/home/{{ fulcrum_user }}/key.pem"
+  tcp: "{{ fulcrum_tcp_host }}:{{ fulcrum_chipnet_tcp_port }}"
+  ssl: "{{ fulcrum_ssl_host }}:{{ fulcrum_chipnet_ssl_port }}"
+  ws: "{{ fulcrum_ws_host }}:{{ fulcrum_chipnet_ws_port }}"
+  wss: "{{ fulcrum_wss_host }}:{{ fulcrum_chipnet_wss_port }}"
 
-tempnet_fulcrum_config:
-  datadir: "{{ fulcrum_tempnet_data_dir }}"
-  bitcoincash: true
-  chipnet: true
-  rpc: "127.0.0.1:{{ tempnet_config.rpcport }}"
-  rpcuser: "{{ tempnet_config.rpcuser }}"
-  rpcpassword: "{{ tempnet_config.rpcpassword }}" 
-  zmq: "127.0.0.1:{{ tempnet_config.zmqpubrawblock | regex_replace('tcp://', '') }}"
-  tcp: "0.0.0.0:50003"  # Optional plain TCP for debugging
-  ssl: "0.0.0.0:{{ fulcrum_tempnet_ssl_port }}"  # New: Standard Electrum SSL for Electron Cash
-  wss: "0.0.0.0:{{ fulcrum_tempnet_wss_port }}"  # Changed to wss for WebSocket over TLS compatibility
-  cert: "{{ fulcrum_tempnet_cert }}"
-  key: "{{ fulcrum_tempnet_key }}"
-  adminrpc: "127.0.0.1:{{ fulcrum_tempnet_admin_port }}"
+  cert: "{{ fulcrum_chipnet_ssl_cert_path }}"
+  key: "{{ fulcrum_chipnet_ssl_key_path }}"
+
+  hostname: ""
+  peering: false
+  announce: false
+
+  admin: "127.0.0.1:8000"
+  stats: "127.0.0.1:8080"
+
+mainnet_fulcrum_config:
+  datadir: "{{ fulcrum_mainnet_data_dir }}"
+  bitcoind: "127.0.0.1:{{ mainnet_config.rpcport }}"
+
+  rpccookie: ""
+  rpcuser: "{{ mainnet_config.rpcuser }}"
+  rpcpassword: "{{ mainnet_config.rpcpassword }}"
+
+  tcp: "{{ fulcrum_tcp_host }}:{{ fulcrum_mainnet_tcp_port }}"
+  ssl: "{{ fulcrum_ssl_host }}:{{ fulcrum_mainnet_ssl_port }}"
+  ws: "{{ fulcrum_ws_host }}:{{ fulcrum_mainnet_ws_port }}"
+  wss: "{{ fulcrum_wss_host }}:{{ fulcrum_mainnet_wss_port }}"
+
+  cert: "{{ fulcrum_mainnet_ssl_cert_path }}"
+  key: "{{ fulcrum_mainnet_ssl_key_path }}"
+
+  hostname: ""
+  peering: false
+  announce: false
+
+  admin: "127.0.0.1:8100"
+  stats: "127.0.0.1:8180"

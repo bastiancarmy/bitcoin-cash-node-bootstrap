@@ -1,24 +1,16 @@
 [Unit]
-Description=Bitcoin Cash Node daemon (Chipnet)
+Description=Bitcoin Cash Node Daemon (Chipnet)
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/bitcoind -conf={{ bchn_chipnet_config_file }} -chipnet
-ExecStop=/usr/bin/bitcoin-cli -conf={{ bchn_chipnet_config_file }} -chipnet stop
+Type=simple
 User={{ bchn_user }}
 Group={{ bchn_user }}
-Type=simple
-Restart=always
-TimeoutSec=300
-RestartSec=30
-StandardOutput=journal
-StandardError=journal
-
-# Hardening measures
-PrivateTmp=true
-ProtectSystem=full
-NoNewPrivileges=true
-MemoryDenyWriteExecute=true
+ExecStart=/usr/local/bin/bitcoind -conf={{ bchn_chipnet_config_file }} -datadir={{ bchn_chipnet_data_dir }}
+ExecStop=/usr/local/bin/bitcoin-cli -conf={{ bchn_chipnet_config_file }} -datadir={{ bchn_chipnet_data_dir }} stop
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target

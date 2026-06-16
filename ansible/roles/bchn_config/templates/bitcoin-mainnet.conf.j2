@@ -3,7 +3,10 @@ server={{ mainnet_config.server }}
 rpcuser={{ mainnet_config.rpcuser }}
 rpcpassword={{ mainnet_config.rpcpassword }}
 rpcallowip=127.0.0.1
-prune=10000
+
+# Required for Fulcrum
+prune=0
+txindex=1
 
 [main]
 rpcport={{ mainnet_config.rpcport }}
