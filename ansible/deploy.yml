@@ -1,6 +1,8 @@
 ---
-- name: Deploy Bitcoin Cash Node configuration for Chipnet
-  hosts: vps
-  become: yes
+- name: Deploy Bitcoin Cash Node configuration for Chipnet, Mainnet, and Tempnet
+  hosts: all
+  become: true
+
   roles:
-    - role: bchn_config
+    - bchn_config
+    - fulcrum_config

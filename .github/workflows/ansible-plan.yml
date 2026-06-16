@@ -1,13 +1,13 @@
 ---
-name: Deploy BCHN + Fulcrum Configuration
+name: Ansible Plan (Check Mode)
 
 "on":
-  push:
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  deploy:
+  plan:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +28,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan "${{ secrets.VAULT_SERVER_IP }}" >> ~/.ssh/known_hosts
 
-      - name: Run Ansible Playbook
+      - name: Run Ansible in check mode (plan)
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           VAULT_SERVER_IP: ${{ secrets.VAULT_SERVER_IP }}
@@ -36,4 +36,9 @@ jobs:
           VAULT_RPC_PASSWORD: ${{ secrets.VAULT_RPC_PASSWORD }}
           VAULT_RPC_PASSWORD_MAINNET: ${{ secrets.VAULT_RPC_PASSWORD_MAINNET }}
         run: |
-          ansible-playbook -i ansible/inventory.yml ansible/deploy.yml -vv
+          ansible-playbook \
+            -i ansible/inventory.yml \
+            ansible/deploy.yml \
+            --check \
+            --diff \
+            -vv

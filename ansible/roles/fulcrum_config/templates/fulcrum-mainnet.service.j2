@@ -1,6 +1,6 @@
 [Unit]
-Description=Fulcrum (Chipnet) Electrum Server
-After=network-online.target bitcoind-chipnet.service
+Description=Fulcrum (Mainnet) Electrum Server
+After=network-online.target bitcoind-mainnet.service
 Wants=network-online.target
 
 [Service]
@@ -8,7 +8,7 @@ Type=simple
 User={{ fulcrum_user }}
 Group={{ fulcrum_group }}
 
-ExecStart=/usr/local/bin/Fulcrum {{ fulcrum_chipnet_config_file }}
+ExecStart=/usr/local/bin/Fulcrum {{ fulcrum_mainnet_config_file }}
 Restart=always
 RestartSec=30
 TimeoutSec=300
@@ -22,7 +22,7 @@ ProtectSystem=full
 ProtectHome=true
 MemoryDenyWriteExecute=true
 
-ReadWritePaths={{ fulcrum_chipnet_data_dir }} /etc/fulcrum
+ReadWritePaths={{ fulcrum_mainnet_data_dir }} /etc/fulcrum
 ReadOnlyPaths=/etc/ssl/certs /etc/ssl/private
 
 [Install]

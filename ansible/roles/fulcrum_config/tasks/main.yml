@@ -1,93 +1,221 @@
 ---
+- name: Ensure Fulcrum group exists
+  ansible.builtin.group:
+    name: "{{ fulcrum_group }}"
+    system: true
+
 - name: Ensure Fulcrum user exists
   ansible.builtin.user:
     name: "{{ fulcrum_user }}"
-    state: present
-    create_home: yes
+    group: "{{ fulcrum_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
 
-- name: Ensure Fulcrum data directory exists for Chipnet
+- name: Ensure Fulcrum config directory exists
+  ansible.builtin.file:
+    path: "/etc/fulcrum"
+    state: directory
+    owner: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_group }}"
+    mode: "0750"
+
+- name: Ensure Fulcrum TLS directory exists
+  ansible.builtin.file:
+    path: "{{ fulcrum_tls_dir }}"
+    state: directory
+    owner: root
+    group: "{{ fulcrum_group }}"
+    mode: "0750"
+
+- name: Ensure Fulcrum data directory exists (Chipnet)
   ansible.builtin.file:
     path: "{{ fulcrum_chipnet_data_dir }}"
     state: directory
     owner: "{{ fulcrum_user }}"
-    group: "{{ fulcrum_user }}"
-    mode: "0700"
+    group: "{{ fulcrum_group }}"
+    mode: "0750"
 
-- name: Ensure Fulcrum data directory exists for Tempnet
+- name: Ensure Fulcrum data directory exists (Mainnet)
   ansible.builtin.file:
-    path: "{{ fulcrum_tempnet_data_dir }}"
+    path: "{{ fulcrum_mainnet_data_dir }}"
     state: directory
     owner: "{{ fulcrum_user }}"
-    group: "{{ fulcrum_user }}"
-    mode: "0700"
+    group: "{{ fulcrum_group }}"
+    mode: "0750"
 
-- name: Generate self-signed SSL certificate if not exists
+# -------------------------------------------------------------------
+# TLS (self-signed) - generate on server, store in /etc/fulcrum/tls
+# -------------------------------------------------------------------
+
+- name: Generate private key (Chipnet) if missing
   ansible.builtin.command:
-    cmd: "openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -keyout {{ fulcrum_chipnet_key }} -out {{ fulcrum_chipnet_cert }} -subj '/CN=localhost'"
-    creates: "{{ fulcrum_chipnet_cert }}"
-  become_user: "{{ fulcrum_user }}"
+    cmd: >-
+      openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out {{
+      fulcrum_chipnet_ssl_key_path }}
+    creates: "{{ fulcrum_chipnet_ssl_key_path }}"
 
-- name: Deploy Fulcrum config for Chipnet
+- name: Generate self-signed certificate (Chipnet) if missing
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -new -x509 -sha256 -days 825 -key {{
+      fulcrum_chipnet_ssl_key_path }} -out {{ fulcrum_chipnet_ssl_cert_path }}
+      -subj "/CN={{ fulcrum_cert_cn }}" -addext "{{ fulcrum_cert_san }}"
+    creates: "{{ fulcrum_chipnet_ssl_cert_path }}"
+  notify: Restart fulcrum-chipnet
+
+- name: Fix permissions on TLS files (Chipnet)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: "{{ fulcrum_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ fulcrum_chipnet_ssl_cert_path }}"
+      mode: "0644"
+    - path: "{{ fulcrum_chipnet_ssl_key_path }}"
+      mode: "0640"
+  notify: Restart fulcrum-chipnet
+
+- name: Generate private key (Mainnet) if missing
+  ansible.builtin.command:
+    cmd: >-
+      openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out {{
+      fulcrum_mainnet_ssl_key_path }}
+    creates: "{{ fulcrum_mainnet_ssl_key_path }}"
+
+- name: Generate self-signed certificate (Mainnet) if missing
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -new -x509 -sha256 -days 825 -key {{
+      fulcrum_mainnet_ssl_key_path }} -out {{ fulcrum_mainnet_ssl_cert_path }}
+      -subj "/CN={{ fulcrum_cert_cn }}" -addext "{{ fulcrum_cert_san }}"
+    creates: "{{ fulcrum_mainnet_ssl_cert_path }}"
+  notify: Restart fulcrum-mainnet
+
+- name: Fix permissions on TLS files (Mainnet)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: "{{ fulcrum_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ fulcrum_mainnet_ssl_cert_path }}"
+      mode: "0644"
+    - path: "{{ fulcrum_mainnet_ssl_key_path }}"
+      mode: "0640"
+  notify: Restart fulcrum-mainnet
+
+# -------------------------------------------------------------------
+# Configs + systemd
+# -------------------------------------------------------------------
+
+- name: Deploy Fulcrum config (Chipnet)
   ansible.builtin.template:
     src: fulcrum-chipnet.conf.j2
     dest: "{{ fulcrum_chipnet_config_file }}"
     owner: "{{ fulcrum_user }}"
-    group: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_group }}"
     mode: "0640"
-    backup: yes
+    backup: true
   notify: Restart fulcrum-chipnet
 
-- name: Deploy Fulcrum config for Tempnet
+- name: Deploy Fulcrum config (Mainnet)
   ansible.builtin.template:
-    src: fulcrum-tempnet.conf.j2
-    dest: "{{ fulcrum_tempnet_config_file }}"
+    src: fulcrum-mainnet.conf.j2
+    dest: "{{ fulcrum_mainnet_config_file }}"
     owner: "{{ fulcrum_user }}"
-    group: "{{ fulcrum_user }}"
+    group: "{{ fulcrum_group }}"
     mode: "0640"
-    backup: yes
-  notify: Restart fulcrum-tempnet
+    backup: true
+  notify: Restart fulcrum-mainnet
 
-- name: Create fulcrum-chipnet systemd service file
+- name: Deploy systemd unit file for Fulcrum (Chipnet)
   ansible.builtin.template:
     src: fulcrum-chipnet.service.j2
-    dest: /etc/systemd/system/fulcrum-chipnet.service
+    dest: "/etc/systemd/system/{{ fulcrum_chipnet_service_name }}.service"
     owner: root
     group: root
     mode: "0644"
-  notify: Reload systemd
+  notify: Reload systemd (fulcrum)
 
-- name: Create fulcrum-tempnet systemd service file
+- name: Deploy systemd unit file for Fulcrum (Mainnet)
   ansible.builtin.template:
-    src: fulcrum-tempnet.service.j2
-    dest: /etc/systemd/system/fulcrum-tempnet.service
+    src: fulcrum-mainnet.service.j2
+    dest: "/etc/systemd/system/{{ fulcrum_mainnet_service_name }}.service"
     owner: root
     group: root
     mode: "0644"
-  notify: Reload systemd
+  notify: Reload systemd (fulcrum)
 
-- name: Allow Fulcrum ports in firewall
-  ansible.builtin.ufw:
+- name: Ensure Fulcrum Chipnet service is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ fulcrum_chipnet_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  register: fulcrum_chipnet_result
+  ignore_errors: true
+
+- name: Check Fulcrum Chipnet service logs on failure
+  ansible.builtin.command:
+    cmd: "journalctl -u {{ fulcrum_chipnet_service_name }} -b --no-pager"
+  register: fulcrum_chipnet_logs
+  when: fulcrum_chipnet_result.failed
+  changed_when: false
+
+- name: Report Fulcrum Chipnet service failure
+  ansible.builtin.debug:
+    msg: |
+      Fulcrum Chipnet service failed to start. Logs:
+      {{ fulcrum_chipnet_logs.stdout }}
+  when: fulcrum_chipnet_result.failed
+  failed_when: fulcrum_chipnet_result.failed
+
+- name: Ensure Fulcrum Mainnet service is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ fulcrum_mainnet_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  register: fulcrum_mainnet_result
+  ignore_errors: true
+
+- name: Check Fulcrum Mainnet service logs on failure
+  ansible.builtin.command:
+    cmd: "journalctl -u {{ fulcrum_mainnet_service_name }} -b --no-pager"
+  register: fulcrum_mainnet_logs
+  when: fulcrum_mainnet_result.failed
+  changed_when: false
+
+- name: Report Fulcrum Mainnet service failure
+  ansible.builtin.debug:
+    msg: |
+      Fulcrum Mainnet service failed to start. Logs:
+      {{ fulcrum_mainnet_logs.stdout }}
+  when: fulcrum_mainnet_result.failed
+  failed_when: fulcrum_mainnet_result.failed
+
+# -------------------------------------------------------------------
+# Firewall
+# -------------------------------------------------------------------
+
+- name: Open Fulcrum Chipnet ports in UFW (TCP/SSL/WSS)
+  community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
   loop:
-    - "50001"  # Chipnet TCP
-    - "{{ fulcrum_chipnet_wss_port }}"  # Chipnet WSS (50002)
-    - "{{ fulcrum_chipnet_ssl_port }}"  # Chipnet SSL (50000) - New
-    - "50003"  # Tempnet TCP
-    - "{{ fulcrum_tempnet_wss_port }}"  # Tempnet WSS (50004)
-    - "{{ fulcrum_tempnet_ssl_port }}"  # Tempnet SSL (50005) - New
+    - "{{ fulcrum_chipnet_tcp_port }}"
+    - "{{ fulcrum_chipnet_ssl_port }}"
+    - "{{ fulcrum_chipnet_wss_port }}"
 
-- name: Ensure fulcrum-chipnet service is enabled and running
-  ansible.builtin.systemd:
-    name: "fulcrum-chipnet"
-    state: started
-    enabled: yes
-    daemon_reload: yes
-
-- name: Ensure fulcrum-tempnet service is enabled and running
-  ansible.builtin.systemd:
-    name: "fulcrum-tempnet"
-    state: started
-    enabled: yes
-    daemon_reload: yes
+- name: Open Fulcrum Mainnet ports in UFW (TCP/SSL/WSS)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ fulcrum_mainnet_tcp_port }}"
+    - "{{ fulcrum_mainnet_ssl_port }}"
+    - "{{ fulcrum_mainnet_wss_port }}"

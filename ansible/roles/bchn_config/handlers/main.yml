@@ -1,9 +1,19 @@
 ---
+# Backwards-compatible alias so tasks can notify either name.
 - name: Reload systemd
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
 
-- name: Restart bitcoind
+- name: Reload systemd (bchn)
   ansible.builtin.systemd:
-    name: "{{ bchn_service_name }}"
+    daemon_reload: true
+
+- name: Restart bitcoind-chipnet
+  ansible.builtin.systemd:
+    name: "{{ bchn_chipnet_service_name }}"
+    state: restarted
+
+- name: Restart bitcoind-mainnet
+  ansible.builtin.systemd:
+    name: "{{ bchn_mainnet_service_name }}"
     state: restarted

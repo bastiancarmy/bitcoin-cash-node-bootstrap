@@ -47,11 +47,11 @@ The script will:
 **Note**: If RAM is low, the script adds temporary swap for building BCHN.
 
 ### 2. Configure GitHub Repository Secrets
-After `setup.sh` completes, it outputs secret values. Add them to your GitHub repo:
+After `setup.sh` completes, it outputs the server connection values and a generated RPC password. Add them to your GitHub repo:
 
 - Go to your repo on GitHub: Settings > Secrets and variables > Actions > New repository secret.
 - Create these secrets:
-  - `VPS_SSH_KEY`: Your local SSH private key (contents of `~/.ssh/id_rsa` from the machine where you generated the key pair). **Do not use the VPS for this—private keys should never be stored on the server.**
+  - `VPS_SSH_KEY`: A dedicated deploy-only SSH private key from your local machine. The matching public key is the one you pasted into `setup.sh`. **Do not use a personal SSH key, and do not generate or store private keys on the VPS.**
   - `VAULT_SERVER_IP`: The VPS public IP (output from script).
   - `VAULT_DEPLOY_USER`: Usually "deployer" (output from script).
   - `VAULT_RPC_PASSWORD`: Generated RPC password (output from script). This is shared across networks; for Mainnet, optionally add `VAULT_RPC_PASSWORD_MAINNET` for a separate password.

@@ -1,0 +1,65 @@
+# Fulcrum Mainnet configuration (managed by Ansible)
+
+# Required
+datadir = {{ mainnet_fulcrum_config.datadir }}
+bitcoind = {{ mainnet_fulcrum_config.bitcoind }}
+
+# Authentication (prefer cookie auth)
+{% if mainnet_fulcrum_config.rpccookie is defined and
+      mainnet_fulcrum_config.rpccookie|length > 0 %}
+rpccookie = {{ mainnet_fulcrum_config.rpccookie }}
+{% else %}
+rpcuser = {{ mainnet_fulcrum_config.rpcuser }}
+rpcpassword = {{ mainnet_fulcrum_config.rpcpassword }}
+{% endif %}
+
+# Electrum endpoints
+{% if mainnet_fulcrum_config.tcp is defined and mainnet_fulcrum_config.tcp|length > 0 %}
+tcp = {{ mainnet_fulcrum_config.tcp }}
+{% endif %}
+
+{% if mainnet_fulcrum_config.ssl is defined and mainnet_fulcrum_config.ssl|length > 0 %}
+ssl = {{ mainnet_fulcrum_config.ssl }}
+{% endif %}
+
+{% if mainnet_fulcrum_config.ws is defined and mainnet_fulcrum_config.ws|length > 0 %}
+ws = {{ mainnet_fulcrum_config.ws }}
+{% endif %}
+
+{% if mainnet_fulcrum_config.wss is defined and mainnet_fulcrum_config.wss|length > 0 %}
+wss = {{ mainnet_fulcrum_config.wss }}
+{% endif %}
+
+# TLS material (required if ssl or wss enabled)
+{% if (mainnet_fulcrum_config.ssl is defined and mainnet_fulcrum_config.ssl|length > 0) or
+      (mainnet_fulcrum_config.wss is defined and mainnet_fulcrum_config.wss|length > 0) %}
+cert = {{ mainnet_fulcrum_config.cert }}
+key = {{ mainnet_fulcrum_config.key }}
+{% endif %}
+
+# Optional: use CA-signed certs for WSS (recommended for browser/mobile clients)
+{% if mainnet_fulcrum_config.wss_cert is defined and mainnet_fulcrum_config.wss_cert|length > 0 %}
+wss_cert = {{ mainnet_fulcrum_config.wss_cert }}
+{% endif %}
+{% if mainnet_fulcrum_config.wss_key is defined and mainnet_fulcrum_config.wss_key|length > 0 %}
+wss_key = {{ mainnet_fulcrum_config.wss_key }}
+{% endif %}
+
+# Public identity / peering
+{% if mainnet_fulcrum_config.hostname is defined and mainnet_fulcrum_config.hostname|length > 0 %}
+hostname = {{ mainnet_fulcrum_config.hostname }}
+{% endif %}
+{% if mainnet_fulcrum_config.peering is defined %}
+peering = {{ mainnet_fulcrum_config.peering | ternary('true','false') }}
+{% endif %}
+{% if mainnet_fulcrum_config.announce is defined %}
+announce = {{ mainnet_fulcrum_config.announce | ternary('true','false') }}
+{% endif %}
+
+# Local-only admin + stats (do not expose publicly)
+{% if mainnet_fulcrum_config.admin is defined and mainnet_fulcrum_config.admin|length > 0 %}
+admin = {{ mainnet_fulcrum_config.admin }}
+{% endif %}
+{% if mainnet_fulcrum_config.stats is defined and mainnet_fulcrum_config.stats|length > 0 %}
+stats = {{ mainnet_fulcrum_config.stats }}
+{% endif %}

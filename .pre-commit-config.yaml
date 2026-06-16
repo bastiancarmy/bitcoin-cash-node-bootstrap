@@ -1,0 +1,26 @@
+---
+repos:
+  # Basic whitespace / EOF fixes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+
+  # yamllint (matches CI behavior; uses .yamllint if present)
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ["-s"]
+
+  # Prettier for YAML to fix formatting / line wrapping where possible
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: \.(yml|yaml)$
+        args:
+          - --prose-wrap=always
+          - --print-width=80

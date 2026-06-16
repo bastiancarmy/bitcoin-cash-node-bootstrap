@@ -1,13 +1,64 @@
+# Fulcrum Chipnet configuration (managed by Ansible)
+
+# Required
 datadir = {{ chipnet_fulcrum_config.datadir }}
-bitcoincash = {{ chipnet_fulcrum_config.bitcoincash }}
-chipnet = {{ chipnet_fulcrum_config.chipnet }}
-bitcoind = {{ chipnet_fulcrum_config.rpc }}
+bitcoind = {{ chipnet_fulcrum_config.bitcoind }}
+
+# Authentication (prefer cookie auth)
+{% if chipnet_fulcrum_config.rpccookie is defined and chipnet_fulcrum_config.rpccookie|length > 0 %}
+rpccookie = {{ chipnet_fulcrum_config.rpccookie }}
+{% else %}
 rpcuser = {{ chipnet_fulcrum_config.rpcuser }}
 rpcpassword = {{ chipnet_fulcrum_config.rpcpassword }}
-zmq = {{ chipnet_fulcrum_config.zmq }}
+{% endif %}
+
+# Electrum endpoints
+{% if chipnet_fulcrum_config.tcp is defined and chipnet_fulcrum_config.tcp|length > 0 %}
 tcp = {{ chipnet_fulcrum_config.tcp }}
-ssl = {{ chipnet_fulcrum_config.ssl }}  # New line for SSL
+{% endif %}
+
+{% if chipnet_fulcrum_config.ssl is defined and chipnet_fulcrum_config.ssl|length > 0 %}
+ssl = {{ chipnet_fulcrum_config.ssl }}
+{% endif %}
+
+{% if chipnet_fulcrum_config.ws is defined and chipnet_fulcrum_config.ws|length > 0 %}
+ws = {{ chipnet_fulcrum_config.ws }}
+{% endif %}
+
+{% if chipnet_fulcrum_config.wss is defined and chipnet_fulcrum_config.wss|length > 0 %}
 wss = {{ chipnet_fulcrum_config.wss }}
+{% endif %}
+
+# TLS material (required if ssl or wss enabled)
+{% if (chipnet_fulcrum_config.ssl is defined and chipnet_fulcrum_config.ssl|length > 0) or
+      (chipnet_fulcrum_config.wss is defined and chipnet_fulcrum_config.wss|length > 0) %}
 cert = {{ chipnet_fulcrum_config.cert }}
 key = {{ chipnet_fulcrum_config.key }}
-adminrpc = {{ chipnet_fulcrum_config.adminrpc }}
+{% endif %}
+
+# Optional: use CA-signed certs for WSS (recommended for browser/mobile clients)
+{% if chipnet_fulcrum_config.wss_cert is defined and chipnet_fulcrum_config.wss_cert|length > 0 %}
+wss_cert = {{ chipnet_fulcrum_config.wss_cert }}
+{% endif %}
+{% if chipnet_fulcrum_config.wss_key is defined and chipnet_fulcrum_config.wss_key|length > 0 %}
+wss_key = {{ chipnet_fulcrum_config.wss_key }}
+{% endif %}
+
+# Public identity / peering
+{% if chipnet_fulcrum_config.hostname is defined and chipnet_fulcrum_config.hostname|length > 0 %}
+hostname = {{ chipnet_fulcrum_config.hostname }}
+{% endif %}
+{% if chipnet_fulcrum_config.peering is defined %}
+peering = {{ chipnet_fulcrum_config.peering | ternary('true','false') }}
+{% endif %}
+{% if chipnet_fulcrum_config.announce is defined %}
+announce = {{ chipnet_fulcrum_config.announce | ternary('true','false') }}
+{% endif %}
+
+# Local-only admin + stats (do not expose publicly)
+{% if chipnet_fulcrum_config.admin is defined and chipnet_fulcrum_config.admin|length > 0 %}
+admin = {{ chipnet_fulcrum_config.admin }}
+{% endif %}
+{% if chipnet_fulcrum_config.stats is defined and chipnet_fulcrum_config.stats|length > 0 %}
+stats = {{ chipnet_fulcrum_config.stats }}
+{% endif %}
